@@ -55,40 +55,43 @@ function M.prompt(text)
   return bridge.prompt(text)
 end
 
----Text of the last visual selection / mark range.
----@param mode "'v'" | "'V'" | "'\\22'"
----@return string[]?
-local function range_text(mode)
-  local from = vim.fn.getpos("'<")
-  local to = vim.fn.getpos("'>")
-  if from[2] == 0 or to[2] == 0 then
-    return nil
-  end
-  if vim.fn.has("nvim-0.11") == 1 then
-    return vim.fn.getregion({ from[2], from[3] - 1 }, { to[2], to[3] - 1 }, { type = mode })
-  end
-  return vim.fn.getline(from[2], to[2])
-end
-
----Send the current file with the selection/range as context.
----@param mode "'v'" | "'V'" | "'\\22'"
+---Send the current file with lines [from, to] as context.
+---@param from integer 1-based first line
+---@param to integer 1-based last line
 ---@param extra? string Optional instruction prepended to the context.
 ---@return boolean ok
 ---@return string? err
-function M.send_selection(mode, extra)
-  local lines = range_text(mode)
-  if not lines then
-    return false, "no selection"
+function M.send_range(from, to, extra)
+  if from > to then
+    from, to = to, from
+  end
+  local lines = vim.fn.getline(from, to)
+  if #lines == 0 then
+    return false, "empty range"
   end
   local file = vim.fn.expand("%")
   local text = table.concat(lines, "\n")
   if file ~= "" then
-    text = string.format("%s:%d\n```\n%s\n```", file, vim.fn.line("'<"), text)
+    text = string.format("%s:%d-%d\n```\n%s\n```", file, from, to, text)
   end
   if extra and extra ~= "" then
     text = extra .. "\n\n" .. text
   end
   return M.prompt(text)
+end
+
+---Send the last visual selection as context.
+---@param _mode string Unused; line-based.
+---@param extra? string Optional instruction prepended to the context.
+---@return boolean ok
+---@return string? err
+function M.send_selection(_mode, extra)
+  local from = vim.fn.getpos("'<")
+  local to = vim.fn.getpos("'>")
+  if from[2] == 0 or to[2] == 0 then
+    return false, "no selection"
+  end
+  return M.send_range(from[2], to[2], extra)
 end
 
 return M

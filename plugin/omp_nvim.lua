@@ -8,16 +8,17 @@ require("omp_nvim.bridge").on_status(function(event)
 end)
 
 -- :OmpAsk [instruction] — send a prompt to the omp in this directory.
--- With a range (e.g. :'<,'>OmpAsk explain) sends the current file + range.
+-- Ranges send the current file's lines: :5,20OmpAsk, :%OmpAsk, :'<,'>OmpAsk.
 vim.api.nvim_create_user_command("OmpAsk", function(args)
   local text = table.concat(args.fargs, " ")
+  local omp = require("omp_nvim")
   local ok, err
   if args.range > 0 then
-    ok, err = require("omp_nvim").send_selection("line", text)
+    ok, err = omp.send_range(args.line1, args.line2, text)
   elseif text ~= "" then
-    ok, err = require("omp_nvim").prompt(text)
+    ok, err = omp.prompt(text)
   else
-    ok, err = require("omp_nvim").prompt(vim.fn.input("omp: "))
+    ok, err = omp.prompt(vim.fn.input("omp: "))
   end
   if not ok then
     vim.notify(err, vim.log.levels.WARN, { title = "omp.nvim" })
