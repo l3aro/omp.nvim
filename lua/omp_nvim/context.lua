@@ -70,13 +70,7 @@ function Context.range_reference(buf, from, to)
   if not vim.bo[buf].modified then
     return string.format("@%s:%d-%d", file, from, to)
   end
-  return string.format(
-    "@%s:%d-%d (unsaved buffer — exact content at %s)",
-    file,
-    from,
-    to,
-    snapshot(buf, from, to)
-  )
+  return string.format("@%s:%d-%d (unsaved buffer — exact content at %s)", file, from, to, snapshot(buf, from, to))
 end
 
 ---Context reference for a whole buffer, or nil when it has no file name.

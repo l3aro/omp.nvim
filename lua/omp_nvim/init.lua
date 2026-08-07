@@ -27,14 +27,12 @@ function M.install_extension()
   end
   vim.fn.mkdir(ext_dir, "p")
   local want = vim.fn.join(vim.fn.readfile(bundled), "\n")
-  if vim.fn.filereadable(target) == 1
-    and vim.fn.join(vim.fn.readfile(target), "\n") == want then
+  if vim.fn.filereadable(target) == 1 and vim.fn.join(vim.fn.readfile(target), "\n") == want then
     return false
   end
   vim.fn.writefile(vim.split(want, "\n", { plain = true }), target)
   vim.notify(
-    "omp.nvim: bridge extension installed to " .. target
-      .. " (restart running omp instances to load it)",
+    "omp.nvim: bridge extension installed to " .. target .. " (restart running omp instances to load it)",
     vim.log.levels.INFO,
     { title = "omp.nvim" }
   )
