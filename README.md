@@ -48,6 +48,23 @@ vim.pack.add({
 > [!TIP]
 > Run `:checkhealth omp_nvim` after setup.
 
+## 🔌 Bridge extension
+
+`setup()` auto-installs the bridge to `~/.omp/agent/extensions/omp-nvim-bridge.ts`, where every omp discovers it at startup. You normally never touch it, but reinstall (or repair) anytime:
+
+```vim
+:OmpNvimInstallExtension
+```
+
+Without nvim:
+
+```bash
+cp <repo>/extension/omp-nvim-bridge.ts ~/.omp/agent/extensions/omp-nvim-bridge.ts
+```
+
+> [!IMPORTANT]
+> Restart omp after (re)installing — extensions are only picked up at process start.
+
 ## 🚀 Usage
 
 ### Ask — `:OmpAsk` / `<leader>oa`
@@ -88,7 +105,7 @@ omp.ask()                                                   -- Interactive ask, 
 
 ## 🛠 How it works
 
-`setup()` installs the bundled bridge extension to `~/.omp/agent/extensions/omp-nvim-bridge.ts`, where every omp auto-discovers it. The extension opens a per-directory Unix socket (`~/.omp/run/omp-nvim/omp-nvim-<hash>.sock`); the plugin sends JSONL prompt frames over it, and the bridge injects them into the live session via `sendUserMessage`. Reinstall manually at any time with `:OmpNvimInstallExtension`.
+`setup()` installs the bundled bridge extension to `~/.omp/agent/extensions/omp-nvim-bridge.ts`, where every omp auto-discovers it. The extension opens a per-directory Unix socket (`~/.omp/run/omp-nvim/omp-nvim-<hash>.sock`); the plugin sends JSONL prompt frames over it, and the bridge injects them into the live session via `sendUserMessage` (see [Bridge extension](#-bridge-extension) for reinstalling).
 
 > [!IMPORTANT]
 > The omp instance must have been started (or restarted) after the extension was installed to pick it up.

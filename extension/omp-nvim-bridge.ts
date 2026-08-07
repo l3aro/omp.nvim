@@ -140,6 +140,4 @@ export default async function ompNvimBridge(pi: Pi): Promise<void> {
       // best effort
     }
   });
-
-  console.error(`[omp-nvim] bridge listening on ${socketPath}`);
 }
