@@ -4,9 +4,9 @@ Neovim plugin that talks to the [omp](https://omp.sh/) agent running in your cur
 
 ## ⭐ Motivation
 
-AI works best at small, focused scopes — as a pair programmer with the human driving. You stay in control, craft the code that matters, and keep your skills sharp. omp.nvim just provides the context and connection to make that pairing seamless.
+ACP treats OMP as a simple prompt endpoint. As a result, many of OMP's interactive capabilities are inaccessible from Neovim, forcing users to switch back to the terminal for common tasks like changing models or toggling runtime features.
 
-Rather than introduce yet another interaction model, omp.nvim injects prompts into the omp session you already have running — the same session, same history, same files. You keep your environment, your config, your flow.
+Rather than being another AI chat plugin, this project focuses on exposing OMP itself inside Neovim.
 
 ## ✨ Features
 
@@ -163,10 +163,12 @@ omp.nvim ships with sensible defaults — there is nothing to configure for basi
 
 ### Keymaps
 
-| Default       | Mode | Effect                  |
-| ------------- | ---- | ----------------------- |
-| `<leader>oa`  | n    | Interactive ask         |
-| `<leader>oa`  | x    | Ask about the selection |
+| Default       | Mode | Effect                              |
+| ------------- | ---- | ----------------------------------- |
+| `<leader>oa`  | n    | Interactive ask                     |
+| `<leader>oa`  | x    | Ask about the selection             |
+| `<leader>oA`  | n    | Ask, then hold in omp's input       |
+| `<leader>oA`  | x    | Hold the selection in omp's input   |
 
 Opt out with `vim.g.omp_nvim_no_keymaps = true` (must be set before the plugin loads) and bind your own — see the [Setup](#-setup) snippets for vim.pack and lazy.nvim, or simply remap over the defaults with `vim.keymap.set` after plugin load.
 
