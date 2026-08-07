@@ -20,7 +20,7 @@ Rather than introduce yet another interaction model, omp.nvim injects prompts in
 
 ## 📦 Setup
 
-Requires Neovim 0.10+ (uses `vim.uv` pipe transport).
+Requires Neovim 0.11+ (uses `vim.uv` pipe transport; the recommended `vim.pack` setup needs 0.11).
 
 [vim.pack](https://neovim.io/doc/user/pack/#vim.pack) (recommended)
 
