@@ -50,10 +50,12 @@ end
 
 ---Inject a prompt into the omp session running in the current directory.
 ---@param text string
+---@param opts? { submit?: boolean } Pass { submit = false } to fill omp's input
+---editor without submitting; press Enter there to run.
 ---@return boolean ok
 ---@return string? err
-function M.prompt(text)
-  return bridge.prompt(text)
+function M.prompt(text, opts)
+  return bridge.prompt(text, opts and opts.submit)
 end
 
 ---Send the current file with lines [from, to] as context.
@@ -95,26 +97,92 @@ function M.send_selection(_mode, extra)
   return M.send_range(from[2], to[2], extra)
 end
 
+---Interactive input dialog in a floating prompt buffer.
+---Enter submits; Esc/Ctrl-C discards. Pass { hold = true } to make Enter
+---fill omp's input without submitting instead (press Enter in omp to run).
+---Callback fires with (text, mode) — mode is "submit"|"hold" — or
+---(nil, nil) when cancelled.
+---@param prompt string
+---@param cb fun(text: string?, mode: "submit"|"hold"|nil)
+---@param opts? { hold?: boolean } When true, Enter holds (mode is always "hold").
+function M.input_dialog(prompt, cb, opts)
+  local hold = opts and opts.hold
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.bo[buf].buftype = "prompt"
+  vim.bo[buf].bufhidden = "wipe"
+  vim.fn.prompt_setprompt(buf, prompt)
+  local ok, win = pcall(vim.api.nvim_open_win, buf, true, {
+    relative = "editor",
+    row = math.max(0, vim.o.lines - 3),
+    col = 2,
+    width = math.max(20, vim.o.columns - 4),
+    height = 1,
+    style = "minimal",
+    border = "rounded",
+  })
+  if not ok then
+    vim.api.nvim_buf_delete(buf, { force = true })
+    return cb(nil, nil)
+  end
+  local done = false
+  local function finish(mode, line)
+    if done then
+      return
+    end
+    done = true
+    local text
+    if mode then
+      local prefix = vim.fn.prompt_getprompt(buf)
+      text = line:sub(#prefix + 1)
+    end
+    pcall(vim.api.nvim_win_close, win, true)
+    cb(text, mode)
+  end
+  vim.keymap.set("i", "<CR>", function()
+    finish(hold and "hold" or "submit", vim.fn.getline(1))
+  end, { buffer = buf })
+  vim.keymap.set("i", "<Esc>", function()
+    finish(nil)
+  end, { buffer = buf })
+  vim.fn.prompt_setinterrupt(buf, function()
+    finish(nil)
+  end)
+  vim.api.nvim_create_autocmd("WinClosed", {
+    pattern = tostring(win),
+    once = true,
+    callback = function()
+      finish(nil) -- window closed externally (e.g. :q): cancel
+    end,
+  })
+  vim.cmd("startinsert")
+end
+
 ---Ask interactively. Snapshots the current visual selection first (keeps
 ---char/block column precision that a '<,'> command range loses), then
 ---prompts with @this/@buffer resolved. Enter submits; Esc/empty discards.
----@return boolean ok
----@return string? err
-function M.ask()
+---Pass { hold = true } to fill omp's input without submitting instead.
+---@param opts? { hold?: boolean }
+---@return boolean ok Always true; the dialog is asynchronous.
+function M.ask(opts)
   local ctx = context.new() -- must run while still in visual mode
-  local input = vim.fn.input("omp: ")
-  if input == nil or input == "" then
-    return true -- discarded by the user
-  end
-  -- Auto-attach the captured selection unless the prompt is already
-  -- explicit about context (@placeholders); matches '<,'> range behavior.
-  if ctx.range and not input:find("@", 1, true) then
-    local this = ctx:this()
-    if this then
-      input = input .. "\n\n" .. this
+  M.input_dialog("omp: ", function(input, mode)
+    if not input or input == "" then
+      return -- discarded by the user
     end
-  end
-  return M.prompt(ctx:render(input))
+    -- Auto-attach the captured selection unless the prompt is already
+    -- explicit about context (@placeholders); matches '<,'> range behavior.
+    if ctx.range and not input:find("@", 1, true) then
+      local this = ctx:this()
+      if this then
+        input = input .. "\n\n" .. this
+      end
+    end
+    local ok, err = M.prompt(ctx:render(input), mode == "hold" and { submit = false } or nil)
+    if not ok then
+      vim.notify(err, vim.log.levels.WARN, { title = "omp.nvim" })
+    end
+  end, opts)
+  return true
 end
 
 return M

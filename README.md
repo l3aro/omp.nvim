@@ -90,13 +90,19 @@ Send a prompt to the omp in this directory.
 
 | Form            | Sends                                                     |
 | --------------- | --------------------------------------------------------- |
-| `:OmpAsk`       | Interactive input; Enter submits, Esc discards            |
+| `:OmpAsk`       | Floating dialog; Enter submits, Esc discards              |
 | `:OmpAsk text`  | The prompt as given                                       |
 | `:5,20OmpAsk`   | Lines 5–20 of the current file as context                 |
 | `:%OmpAsk`      | The whole file as context                                 |
 | `:'<,'>OmpAsk`  | The last visual range                                     |
-| `<leader>oa` (n)| Interactive ask with `@this`/`@buffer` resolved           |
+| `<leader>oa` (n)| Dialog ask with `@this`/`@buffer` resolved                |
 | `<leader>oa` (x)| Ask about the visual selection                            |
+| `<leader>oA` (n)| Same dialog, but always holds (fills omp input, waits)    |
+| `<leader>oA` (x)| Hold the visual selection as a prompt                     |
+
+**Hold mode**: `<leader>oA` (or `ask({ hold = true })`) runs the same dialog,
+but Enter fills omp's input editor instead of submitting — review it there,
+then press Enter in omp when you're ready.
 
 Opt out of the default keymaps with `vim.g.omp_nvim_no_keymaps = true`.
 
@@ -105,7 +111,9 @@ Opt out of the default keymaps with `vim.g.omp_nvim_no_keymaps = true`.
 ```lua
 local omp = require("omp_nvim")
 
-omp.prompt("Review the error handling here")                -- Inject a prompt verbatim
+omp.prompt("Review the error handling here")                -- Inject a prompt verbatim (runs immediately)
+omp.prompt("Review this", { submit = false })               -- Fill omp's input; press Enter there to run
+omp.input_dialog("omp: ", function(text, mode) end)         -- Floating dialog; mode = "submit"|"hold"|nil
 omp.send_range(5, 20, "Review these lines:")                -- Send file lines 5-20
 omp.send_selection("x", "Explain this:")                    -- Send the last visual selection
 omp.ask()                                                   -- Interactive ask, @this/@buffer resolved
@@ -122,7 +130,7 @@ omp.ask()                                                   -- Interactive ask, 
 
 ## 🛠 How it works
 
-`setup()` installs the bundled bridge extension to `~/.omp/agent/extensions/omp-nvim-bridge.ts`, where every omp auto-discovers it. The extension opens a per-directory Unix socket (`~/.omp/run/omp-nvim/omp-nvim-<hash>.sock`); the plugin sends JSONL prompt frames over it, and the bridge injects them into the live session via `sendUserMessage` (see [Bridge extension](#-bridge-extension) for reinstalling).
+`setup()` installs the bundled bridge extension to `~/.omp/agent/extensions/omp-nvim-bridge.ts`, where every omp auto-discovers it. The extension opens a per-directory Unix socket (`~/.omp/run/omp-nvim/omp-nvim-<hash>.sock`); the plugin sends JSONL prompt frames over it, and the bridge injects them into the live session — submitting via `sendUserMessage`, or filling the input editor (waits for Enter) when the frame carries `submit: false` (see [Bridge extension](#-bridge-extension) for reinstalling).
 
 > [!IMPORTANT]
 > The omp instance must have been started (or restarted) after the extension was installed to pick it up.

@@ -121,15 +121,16 @@ end
 
 ---Inject a prompt into the running omp session.
 ---@param text string
+---@param submit? boolean When false, fill omp's input without submitting; press Enter there to run.
 ---@return boolean ok
 ---@return string? err
-function M.prompt(text)
+function M.prompt(text, submit)
   if #text > MAX_INLINE_BYTES then
     local file = vim.fn.tempname() .. ".md"
     vim.fn.writefile(vim.split(text, "\n", { plain = true }), file)
     text = "Context is in " .. file
   end
-  return M.send({ type = "prompt", text = text })
+  return M.send({ type = "prompt", text = text, submit = submit ~= false })
 end
 
 vim.api.nvim_create_autocmd("VimLeavePre", {

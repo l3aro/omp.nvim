@@ -5,7 +5,7 @@
 //
 // Wire protocol (one JSON object per line):
 //   in:  {"type":"ping"}
-//   in:  {"type":"prompt","text":"..."}
+//   in:  {"type":"prompt","text":"...","submit":true}   submit=false fills the input editor and waits for Enter
 //   out: {"type":"pong"}
 //   out: {"type":"status","event":"ready"|"turn_started"|"turn_ended"}
 import * as fs from "node:fs";
@@ -23,9 +23,19 @@ interface Pi {
   on(event: string, handler: (event: unknown, ctx: unknown) => void): void;
 }
 
+interface SessionCtx {
+  ui: {
+    getEditorText(): string;
+    setEditorText(text: string): void;
+  };
+  hasUI: boolean;
+}
+
 interface PromptFrame {
   type: "prompt";
   text: string;
+  /** false = fill the input editor without submitting; the user presses Enter to run. */
+  submit?: boolean;
 }
 
 function isPromptFrame(value: unknown): value is PromptFrame {
@@ -68,6 +78,23 @@ export default async function ompNvimBridge(pi: Pi): Promise<void> {
   const clients = new Set<net.Socket>();
   const clientBufs = new WeakMap<net.Socket, string>();
 
+  let sessionCtx: SessionCtx | undefined;
+  const pendingCompose: string[] = [];
+
+  // Fill the input editor without submitting (user presses Enter to run).
+  const compose = (text: string): void => {
+    if (!sessionCtx) {
+      pendingCompose.push(text); // session not started yet; flush on session_start
+      return;
+    }
+    if (!sessionCtx.hasUI) {
+      pi.sendUserMessage(text); // headless: no input editor, fall back to submitting
+      return;
+    }
+    const current = sessionCtx.ui.getEditorText();
+    sessionCtx.ui.setEditorText(current ? `${current}\n${text}` : text);
+  };
+
   const broadcast = (frame: object): void => {
     const line = `${JSON.stringify(frame)}\n`;
     for (const client of clients) {
@@ -84,7 +111,11 @@ export default async function ompNvimBridge(pi: Pi): Promise<void> {
       return;
     }
     if (isPromptFrame(frame)) {
-      pi.sendUserMessage(frame.text);
+      if (frame.submit === false) {
+        compose(frame.text);
+      } else {
+        pi.sendUserMessage(frame.text);
+      }
       client.write(`${JSON.stringify({ type: "status", event: "prompt_accepted" })}\n`);
     } else if (typeof frame === "object" && frame !== null && "type" in frame && frame.type === "ping") {
       client.write(`${JSON.stringify({ type: "pong" })}\n`);
@@ -129,6 +160,12 @@ export default async function ompNvimBridge(pi: Pi): Promise<void> {
     // non-fatal; dir is user-private anyway
   }
 
+  pi.on("session_start", (_event, ctx) => {
+    sessionCtx = ctx as SessionCtx;
+    while (pendingCompose.length > 0) {
+      compose(pendingCompose.shift()!);
+    }
+  });
   pi.on("agent_start", () => broadcast({ type: "status", event: "turn_started" }));
   pi.on("agent_end", () => broadcast({ type: "status", event: "turn_ended" }));
 
