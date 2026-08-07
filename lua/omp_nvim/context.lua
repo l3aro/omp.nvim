@@ -95,7 +95,7 @@ function Context:file()
   return vim.fn.fnamemodify(name, ":~:.")
 end
 
----@return string? fenced text of the visual range, or the cursor line
+---@return string? fenced text of the visual range, or the whole buffer
 function Context:this()
   local file = self:file()
   if not file then
@@ -104,8 +104,7 @@ function Context:this()
   if self.range then
     return fence(heading(file, self.range), range_text(self.buf, self.range))
   end
-  local line = vim.api.nvim_buf_get_lines(self.buf, self.cursor[1] - 1, self.cursor[1], false)[1] or ""
-  return fence(string.format("%s:%d", file, self.cursor[1]), line)
+  return self:buffer()
 end
 
 ---@return string? fenced whole buffer
