@@ -121,12 +121,17 @@ omp.ask()                                                   -- Interactive ask, 
 
 ### Placeholders
 
-`@this` and `@buffer` are replaced with fenced editor context in any non-range `:OmpAsk` (interactive or not) and in `omp.ask()`:
+`@this` and `@buffer` are replaced with file references in any non-range `:OmpAsk` (interactive or not) and in `omp.ask()`:
 
-| Placeholder | Context                                   |
-| ----------- | ----------------------------------------- |
-| `@this`     | Visual range or selection, else current file |
-| `@buffer`   | The whole current buffer                  |
+| Placeholder | Reference                                |
+| ----------- | ---------------------------------------- |
+| `@this`     | `@path:start-end` of the visual range or selection, else the current file |
+| `@buffer`   | The whole current file                   |
+
+Context is sent as references (`@path:5-20`), not inlined content — the agent
+reads the file itself, keeping prompts small even for big files. Buffers with
+unsaved changes are snapshotted to a temp file (referenced in the prompt) so
+the agent never reads stale disk content; unnamed buffers are inlined.
 
 ## 🛠 How it works
 

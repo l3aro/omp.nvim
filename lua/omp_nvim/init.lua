@@ -58,7 +58,9 @@ function M.prompt(text, opts)
   return bridge.prompt(text, opts and opts.submit)
 end
 
----Send the current file with lines [from, to] as context.
+---Send the current file with lines [from, to] as context. Named, unmodified
+---buffers reference the file (path:start-end); buffers with unsaved changes
+---are snapshotted to a temp file; unnamed buffers inline the lines.
 ---@param from integer 1-based first line
 ---@param to integer 1-based last line
 ---@param extra? string Optional instruction prepended to the context.
@@ -68,14 +70,9 @@ function M.send_range(from, to, extra)
   if from > to then
     from, to = to, from
   end
-  local lines = vim.fn.getline(from, to)
-  if #lines == 0 then
+  local text = context.range_reference(vim.fn.bufnr("%"), from, to)
+  if text == "" then
     return false, "empty range"
-  end
-  local file = vim.fn.expand("%")
-  local text = table.concat(lines, "\n")
-  if file ~= "" then
-    text = string.format("%s:%d-%d\n```\n%s\n```", file, from, to, text)
   end
   if extra and extra ~= "" then
     text = extra .. "\n\n" .. text

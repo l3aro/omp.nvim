@@ -1,8 +1,10 @@
 ---Editor context snapshot and @placeholder resolution for omp prompts.
 ---Mirrors opencode.nvim's capture: buf/win/cursor/range are snapshotted
----before the prompt UI opens, and @this/@buffer resolve to inlined fenced
----text (the bridge injects plain text; opencode instead sends locations the
----CLI resolves — not verified for omp).
+---before the prompt UI opens. @this/@buffer resolve to file references
+---(path, or path:start-end) instead of inlined content — the agent reads
+---the file itself, so inlining would only waste tokens on big files.
+---Buffers with unsaved changes are snapshotted to temp files (disk content
+---would be stale); unnamed buffers fall back to raw text.
 local Context = {}
 Context.__index = Context
 
@@ -36,41 +38,64 @@ local function selection(buf)
   }
 end
 
----Literal text of a range, trimmed to columns.
+---Snapshot buffer lines [from, to] (1-based, inclusive) to a temp file.
+---Used for buffers with unsaved changes so the agent never reads stale disk
+---content. Temp files are left in the os temp dir (same as bridge.lua's
+---oversized-prompt fallback).
 ---@param buf integer
----@param range omp_nvim.Range
----@return string
-local function range_text(buf, range)
-  local lines = vim.api.nvim_buf_get_lines(buf, range.from[1] - 1, range.to[1], false)
-  if #lines == 0 then
-    return ""
-  end
-  if range.kind == "block" then
-    for i, line in ipairs(lines) do
-      lines[i] = line:sub(range.from[2], math.min(range.to[2], #line))
-    end
-  elseif range.kind == "char" then
-    lines[1] = lines[1]:sub(range.from[2])
-    lines[#lines] = lines[#lines]:sub(1, range.to[2])
-  end
-  return table.concat(lines, "\n")
+---@param from integer
+---@param to integer
+---@return string temp path
+local function snapshot(buf, from, to)
+  local lines = vim.api.nvim_buf_get_lines(buf, from - 1, to, false)
+  local file = vim.fn.tempname()
+  vim.fn.writefile(lines, file)
+  return file
 end
 
----@param file string
----@param range omp_nvim.Range
+---Context reference for buffer lines [from, to] (1-based, inclusive).
+---Named, unmodified buffers reference the real file (path:start-end);
+---buffers with unsaved changes get a temp-file snapshot; unnamed buffers
+---fall back to the raw text.
+---@param buf integer
+---@param from integer
+---@param to integer
 ---@return string
-local function heading(file, range)
-  if range.kind == "line" then
-    return string.format("%s:%d-%d", file, range.from[1], range.to[1])
+function Context.range_reference(buf, from, to)
+  local name = vim.api.nvim_buf_get_name(buf)
+  if name == "" then
+    return table.concat(vim.api.nvim_buf_get_lines(buf, from - 1, to, false), "\n")
   end
-  return string.format("%s:L%d:C%d-L%d:C%d", file, range.from[1], range.from[2], range.to[1], range.to[2])
+  local file = vim.fn.fnamemodify(name, ":~:.")
+  if not vim.bo[buf].modified then
+    return string.format("@%s:%d-%d", file, from, to)
+  end
+  return string.format(
+    "@%s:%d-%d (unsaved buffer — exact content at %s)",
+    file,
+    from,
+    to,
+    snapshot(buf, from, to)
+  )
 end
 
----@param title string
----@param text string
----@return string
-local function fence(title, text)
-  return title .. "\n```\n" .. text .. "\n```"
+---Context reference for a whole buffer, or nil when it has no file name.
+---@param buf integer
+---@return string?
+function Context.buffer_reference(buf)
+  local name = vim.api.nvim_buf_get_name(buf)
+  if name == "" then
+    return nil
+  end
+  local file = vim.fn.fnamemodify(name, ":~:.")
+  if not vim.bo[buf].modified then
+    return "@" .. file
+  end
+  return string.format(
+    "@%s (unsaved buffer — exact content at %s)",
+    file,
+    snapshot(buf, 1, vim.api.nvim_buf_line_count(buf))
+  )
 end
 
 ---Snapshot the current editor state. Call while still in visual mode to
@@ -95,26 +120,21 @@ function Context:file()
   return vim.fn.fnamemodify(name, ":~:.")
 end
 
----@return string? fenced text of the visual range, or the whole buffer
+---@return string? reference to the visual range, or the whole buffer
 function Context:this()
   local file = self:file()
   if not file then
     return nil
   end
   if self.range then
-    return fence(heading(file, self.range), range_text(self.buf, self.range))
+    return Context.range_reference(self.buf, self.range.from[1], self.range.to[1])
   end
   return self:buffer()
 end
 
----@return string? fenced whole buffer
+---@return string? reference to the whole buffer
 function Context:buffer()
-  local file = self:file()
-  if not file then
-    return nil
-  end
-  local text = table.concat(vim.api.nvim_buf_get_lines(self.buf, 0, -1, false), "\n")
-  return fence(file, text)
+  return Context.buffer_reference(self.buf)
 end
 
 ---Resolve @this/@buffer placeholders in a prompt. Unresolvable placeholders
