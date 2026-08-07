@@ -3,6 +3,7 @@
 local M = {}
 
 local bridge = require("omp_nvim.bridge")
+local context = require("omp_nvim.context")
 
 ---Directory containing the bundled bridge extension.
 ---@return string
@@ -92,6 +93,28 @@ function M.send_selection(_mode, extra)
     return false, "no selection"
   end
   return M.send_range(from[2], to[2], extra)
+end
+
+---Ask interactively. Snapshots the current visual selection first (keeps
+---char/block column precision that a '<,'> command range loses), then
+---prompts with @this/@buffer resolved. Enter submits; Esc/empty discards.
+---@return boolean ok
+---@return string? err
+function M.ask()
+  local ctx = context.new() -- must run while still in visual mode
+  local input = vim.fn.input("omp: ")
+  if input == nil or input == "" then
+    return true -- discarded by the user
+  end
+  -- Auto-attach the captured selection unless the prompt is already
+  -- explicit about context (@placeholders); matches '<,'> range behavior.
+  if ctx.range and not input:find("@", 1, true) then
+    local this = ctx:this()
+    if this then
+      input = input .. "\n\n" .. this
+    end
+  end
+  return M.prompt(ctx:render(input))
 end
 
 return M
