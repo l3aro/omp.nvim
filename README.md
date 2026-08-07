@@ -25,6 +25,13 @@ Requires Neovim 0.10+ (uses `vim.uv` pipe transport).
 [vim.pack](https://neovim.io/doc/user/pack/#vim.pack) (recommended)
 
 ```lua
+-- Disable the default <leader>oa maps and bind your own (flag before add)
+vim.g.omp_nvim_no_keymaps = true
+vim.keymap.set("n", "<leader>om", "<Cmd>OmpAsk<CR>", { desc = "omp: ask" })
+vim.keymap.set("x", "<leader>om", function()
+  require("omp_nvim").ask()
+end, { desc = "omp: ask selection" })
+
 vim.pack.add({
   {
     src = "https://github.com/l3aro/omp.nvim",
@@ -40,6 +47,16 @@ vim.pack.add({
 {
   "l3aro/omp.nvim",
   version = "*", -- Latest stable release
+  -- Disable the default <leader>oa maps; init runs before the plugin loads
+  init = function()
+    vim.g.omp_nvim_no_keymaps = true
+  end,
+  keys = {
+    { "<leader>om", "<Cmd>OmpAsk<CR>", desc = "omp: ask" },
+    { "<leader>om", function()
+      require("omp_nvim").ask()
+    end, mode = "x", desc = "omp: ask selection" },
+  },
 }
 ```
 
@@ -130,6 +147,15 @@ omp.nvim ships with sensible defaults — there is nothing to configure for basi
 | Option                       | Effect                                   |
 | ---------------------------- | ---------------------------------------- |
 | `vim.g.omp_nvim_no_keymaps`  | Disable the default `<leader>oa` keymaps |
+
+### Keymaps
+
+| Default       | Mode | Effect                  |
+| ------------- | ---- | ----------------------- |
+| `<leader>oa`  | n    | Interactive ask         |
+| `<leader>oa`  | x    | Ask about the selection |
+
+Opt out with `vim.g.omp_nvim_no_keymaps = true` (must be set before the plugin loads) and bind your own — see the [Setup](#-setup) snippets for vim.pack and lazy.nvim, or simply remap over the defaults with `vim.keymap.set` after plugin load.
 
 ## 📄 License
 
