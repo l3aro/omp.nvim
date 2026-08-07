@@ -28,3 +28,13 @@ end, { range = true, nargs = "*" })
 vim.api.nvim_create_user_command("OmpNvimInstallExtension", function()
   require("omp_nvim").install_extension()
 end, {})
+
+-- Default keymaps; opt out with vim.g.omp_nvim_no_keymaps = true
+if not vim.g.omp_nvim_no_keymaps then
+  vim.keymap.set("n", "<leader>oa", function()
+    vim.cmd("OmpAsk")
+  end, { desc = "omp: ask" })
+  vim.keymap.set("x", "<leader>oa", function()
+    vim.cmd("'<,'>OmpAsk")
+  end, { desc = "omp: ask selection" })
+end
