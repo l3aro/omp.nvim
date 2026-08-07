@@ -130,3 +130,7 @@ omp.nvim ships with sensible defaults — there is nothing to configure for basi
 | Option                       | Effect                                   |
 | ---------------------------- | ---------------------------------------- |
 | `vim.g.omp_nvim_no_keymaps`  | Disable the default `<leader>oa` keymaps |
+
+## 📄 License
+
+[MIT](LICENSE) © [l3aro](https://github.com/l3aro)
