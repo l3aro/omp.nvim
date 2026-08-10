@@ -2,6 +2,8 @@
 
 Neovim plugin that talks to the [omp](https://omp.sh/) agent running in your current directory — without leaving your editor.
 
+![omp.nvim overview](assets/overview_RZS8Ip7dJQ.gif)
+
 ## ⭐ Motivation
 
 ACP treats OMP as a simple prompt endpoint. As a result, many of OMP's interactive capabilities are inaccessible from Neovim, forcing users to switch back to the terminal for common tasks like changing models or toggling runtime features.
