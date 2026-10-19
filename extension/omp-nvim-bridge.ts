@@ -14,7 +14,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
 
-const DIR = path.join(os.homedir(), ".omp", "run", "omp-nvim");
+const DIR = path.join(os.homedir(), process.env.PI_CONFIG_DIR || ".omp", "run", "omp-nvim");
 const HASH_LEN = 16;
 const SOCKET_MODE = 0o600;
 

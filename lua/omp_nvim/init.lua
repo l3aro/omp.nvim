@@ -16,7 +16,7 @@ end
 ---where every omp auto-discovers it. Idempotent; returns true when written.
 ---@return boolean installed
 function M.install_extension()
-  local ext_dir = vim.fn.expand("~") .. "/.omp/agent/extensions"
+  local ext_dir = bridge.config_root .. "/agent/extensions"
   local target = ext_dir .. "/omp-nvim-bridge.ts"
   local bundled = repo_root() .. "/extension/omp-nvim-bridge.ts"
   if vim.fn.filereadable(bundled) == 0 then
