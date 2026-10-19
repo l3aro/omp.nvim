@@ -12,7 +12,7 @@ function M.check()
     return
   end
 
-  local ext = vim.fn.expand("~/.omp/agent/extensions/omp-nvim-bridge.ts")
+  local ext = require("omp_nvim.bridge").config_root .. "/agent/extensions/omp-nvim-bridge.ts"
   if vim.fn.filereadable(ext) == 1 then
     health.ok("bridge extension installed: " .. ext)
   else

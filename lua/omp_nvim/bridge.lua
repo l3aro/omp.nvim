@@ -2,7 +2,9 @@
 ---Mirrors the extension's per-cwd socket: ~/.omp/run/omp-nvim/omp-nvim-<sha256(cwd)16>.sock
 local M = {}
 
-local DIR = vim.fn.expand("~") .. "/.omp/run/omp-nvim"
+local config_dir = vim.env.PI_CONFIG_DIR
+M.config_root = vim.fn.expand("~") .. "/" .. ((config_dir and config_dir ~= "") and config_dir or ".omp")
+local DIR = M.config_root .. "/run/omp-nvim"
 local HASH_LEN = 16
 local MAX_INLINE_BYTES = 900000
 
